@@ -373,13 +373,13 @@ Phase 5: Reporting
 
 **Multi-Path Analysis**:
 - Validate all dataflow paths (not just the first one)
-- Compare multiple attack vectors for same vulnerability
-- Identify most exploitable path when multiple exist
+- Compare distinct attack vectors that converge on the same underlying flaw
+- Determine which path offers the highest likelihood of successful exploitation
 
 **Improved Exploit Generation**:
 - Use dataflow validation insights to guide exploit creation
 - Target specific sanitiser bypasses identified during validation
-- Generate polyglot exploits for multiple contexts
+- Construct exploit variants capable of operating across differing input and execution contexts.
 
 ### Medium Term (3-6 Months)
 
@@ -389,7 +389,7 @@ Phase 5: Reporting
 - Combine static analysis findings with dynamic fuzzing
 
 **Web Scanning**:
-- Activate web application testing module
+- Activate web application testing module and leverage OWASP ASVS where possible
 - Integrate with CodeQL findings for web vulnerabilities
 - Automated exploit generation for web vulns (XSS, SQLi, etc.)
 
