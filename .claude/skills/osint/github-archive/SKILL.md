@@ -277,7 +277,7 @@ JSON_EXTRACT_SCALAR(payload, '$.issue.body')
 
 ### Deleted Issue & PR Text Recovery
 
-**Scenario**: Attacker creates issues or PRs containing evidence of intent, social engineering, or malicious content, then deletes them to hide tracks. You need to recover the full text content.
+**Scenario**: Issue or PR was deleted from GitHub (by author, maintainer, or moderation) but you need to recover the original title and body text for investigation, compliance, or historical reference.
 
 **Step 1: Recover Deleted Issue Content**
 ```sql
@@ -309,7 +309,7 @@ SELECT
 FROM `githubarchive.day.202506*`
 WHERE
     repo.name = 'target/repository'
-    AND actor.login = 'suspected-actor'
+    AND actor.login = 'target-user'
     AND type = 'PullRequestEvent'
 ORDER BY created_at
 ```
@@ -321,13 +321,7 @@ ORDER BY created_at
 - **Actor Attribution**: `actor.login` identifies who created the content
 - **Timestamps**: Exact creation time in `created_at`
 
-**Forensic Value**:
-- Recover evidence of attacker intent, frustration, or coordination
-- Identify social engineering attempts via PR descriptions
-- Reconstruct full context of deleted reconnaissance activity
-- Preserve evidence for incident response reports
-
-**Real Example**: Amazon Q investigation recovered deleted issue content from `lkmanka58`. The issue titled "aws amazon donkey aaaaaaiii aaaaaaaiii" contained an angry rant calling Amazon Q "deceptive" and "scripted fakery" - evidence of attacker frustration that preceded the malicious commits by 12 hours. The full issue body was preserved in GitHub Archive despite deletion from github.com.
+**Real Example**: Amazon Q investigation recovered deleted issue content from `lkmanka58`. The issue titled "aws amazon donkey aaaaaaiii aaaaaaaiii" contained a rant calling Amazon Q "deceptive" and "scripted fakery". The full issue body was preserved in GitHub Archive despite deletion from github.com, providing context for the timeline reconstruction.
 
 ### Deleted PRs
 
