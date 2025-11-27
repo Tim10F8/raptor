@@ -361,52 +361,6 @@ WHERE
 ORDER BY created_at
 ```
 
-**Complete Reconstruction Example**:
-```json
-{
-  "branch_lifecycle": {
-    "created": {
-      "timestamp": "2025-06-13T09:15:30Z",
-      "actor": "threat-actor",
-      "branch": "feature-malicious"
-    },
-    "commits": [
-      {
-        "push_time": "2025-06-13T09:18:45Z",
-        "pusher": "threat-actor",
-        "commits": [
-          {
-            "sha": "9dadab2630bd88e86792ee3ba08c5750f217f9e8",
-            "message": "Initial malicious workflow",
-            "author": "threat-actor <threat@example.com>"
-          },
-          {
-            "sha": "d1c694cf59e2c34ad8a15358a514d106cc54bc37",
-            "message": "Add credential harvesting code",
-            "author": "threat-actor <threat@example.com>"
-          }
-        ]
-      },
-      {
-        "push_time": "2025-06-13T09:45:12Z",
-        "pusher": "threat-actor",
-        "commits": [
-          {
-            "sha": "311a3c525d6831dd08107108f69a9b89ff457022",
-            "message": "Cleanup attribution indicators",
-            "author": "threat-actor <threat@example.com>"
-          }
-        ]
-      }
-    ],
-    "deleted": {
-      "timestamp": "2025-06-13T10:35:20Z",
-      "actor": "threat-actor"
-    }
-  }
-}
-```
-
 **Evidence Recovery**:
 - **Commit SHAs**: All commit identifiers permanently recorded in PushEvent payload
 - **Commit Messages**: Full commit messages preserved in commits array
@@ -421,58 +375,62 @@ ORDER BY created_at
 - Search external code archives (Software Heritage, etc.)
 - Reconstruct complete attack development timeline
 
-**Real Example**: In the Amazon Q investigation, lkmanka58's code_whisperer repository used branch-based development. GitHub Archive preserved complete commit history including SHAs (9dadab2, d1c694c, 311a3c5) with full messages and author details. Even if the repository or branch had been deleted, the PushEvent records would have allowed complete reconstruction of the AWS credential testing workflow development timeline over the 47-minute development session on June 13, 2025.
-
 ### Automation vs Direct API Attribution
 
-**Scenario**: Malicious commits appear under automation account name. Did they come from compromised GitHub Actions workflow, or direct API abuse with stolen token?
+**Scenario**: Suspicious commits appear under automation account name. Determine if they came from legitimate GitHub Actions workflow execution or direct API abuse with compromised token.
 
 **Forensic Approach**:
 ```sql
--- Search for workflow events during malicious commit window
+-- Step 1: Search for workflow events during suspicious commit window
 SELECT
     type,
     created_at,
     actor.login,
     JSON_EXTRACT_SCALAR(payload, '$.workflow_run.name') as workflow_name,
+    JSON_EXTRACT_SCALAR(payload, '$.workflow_run.head_sha') as commit_sha,
     JSON_EXTRACT_SCALAR(payload, '$.workflow_run.conclusion') as conclusion
-FROM `githubarchive.day.20250713`
+FROM `githubarchive.day.YYYYMMDD`
 WHERE
-    repo.name = 'aws/aws-toolkit-vscode'
+    repo.name = 'org/repository'
     AND type IN ('WorkflowRunEvent', 'WorkflowJobEvent')
-    AND created_at >= '2025-07-13T20:25:00'
-    AND created_at <= '2025-07-13T20:35:00'
+    AND created_at >= 'YYYY-MM-DDTHH:MM:SSZ'  -- Start of suspicious window
+    AND created_at <= 'YYYY-MM-DDTHH:MM:SSZ'  -- End of suspicious window
 ORDER BY created_at
 ```
 
-**Normal Automation Baseline**:
+**Baseline Pattern Analysis**:
 ```sql
--- Analyze normal automation patterns on same day
+-- Step 2: Establish normal automation behavior patterns
 SELECT
     type,
     created_at,
     actor.login,
-    JSON_EXTRACT_SCALAR(payload, '$.workflow_run.name') as workflow_name
-FROM `githubarchive.day.20250713`
+    JSON_EXTRACT_SCALAR(payload, '$.workflow_run.name') as workflow_name,
+    JSON_EXTRACT_SCALAR(payload, '$.workflow_run.head_sha') as commit_sha
+FROM `githubarchive.day.YYYYMMDD*`
 WHERE
-    repo.name = 'aws/aws-toolkit-vscode'
-    AND actor.login = 'aws-toolkit-automation'
+    repo.name = 'org/repository'
+    AND actor.login = 'automation-account'
     AND type = 'WorkflowRunEvent'
 ORDER BY created_at
 ```
 
-**Evidence Analysis**:
-- **ZERO workflow events** during malicious commit time (20:30:24 UTC)
-- **18 total workflows** by aws-toolkit-automation on same day
-- **All legitimate workflows** clustered in 20:48-21:02 UTC window
-- **9+ hour gap** between morning activity and evening burst
-- **Abnormal silence** during critical attack infrastructure deployment
+**Commit-to-Workflow Correlation**:
+```sql
+-- Step 3: Check if specific commit SHA has associated workflow
+SELECT
+    w.type,
+    w.created_at,
+    w.actor.login,
+    JSON_EXTRACT_SCALAR(w.payload, '$.workflow_run.name') as workflow_name,
+    JSON_EXTRACT_SCALAR(w.payload, '$.workflow_run.head_sha') as workflow_commit
+FROM `githubarchive.day.YYYYMMDD` w
+WHERE
+    w.repo.name = 'org/repository'
+    AND w.type = 'WorkflowRunEvent'
+    AND JSON_EXTRACT_SCALAR(w.payload, '$.workflow_run.head_sha') = 'suspicious-commit-sha'
+```
 
-**Forensic Conclusion**:
-The complete absence of WorkflowRunEvent or WorkflowJobEvent records during the malicious commit push window proves the attack used direct GitHub API calls, not compromised automation workflows.
+**Investigation Outcome**: Absence of workflow events = Direct API attack with stolen token
 
-**Investigation Outcome**: Direct API attack vector confirmed through negative evidence analysis
-
-**Real Example**: Amazon Q investigation revealed malicious commit 678851bbe9776228f55e0460e66a6167ac2a1685 pushed at 20:30:24 UTC by aws-toolkit-automation. GitHub Archive showed ZERO workflow activity during this time, while the same account had 18 workflows earlier that day. This gap proved the attacker used a stolen token for direct API calls, bypassing workflow systems entirely to minimize forensic traces.
-
-**Key Lesson**: Negative evidence (absence of expected workflows) can be as powerful as positive evidence when analyzing automation systems. Pattern disruption in normally-consistent automation activity is a strong indicator of direct API abuse.
+**Real Example**: Amazon Q investigation needed to determine if malicious commit 678851bbe9776228f55e0460e66a6167ac2a1685 (pushed July 13, 2025 20:30:24 UTC by aws-toolkit-automation) came from compromised workflow or direct API abuse. GitHub Archive query showed ZERO WorkflowRunEvent or WorkflowJobEvent records during the 20:25-20:35 UTC window. Baseline analysis revealed the same automation account had 18 workflows that day, all clustered in 20:48-21:02 UTC. The 9+ hour gap and complete workflow absence during the malicious commit proved direct API attack, not workflow compromise.
