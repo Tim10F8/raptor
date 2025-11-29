@@ -48,7 +48,6 @@ from ._schema import (
     CommitObservation,
     IssueObservation,
     FileObservation,
-    WikiObservation,
     ForkObservation,
     BranchObservation,
     TagObservation,
