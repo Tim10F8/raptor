@@ -5,33 +5,33 @@ This module provides the verification logic for all evidence types.
 Each evidence object can call verify() to compare itself against
 the real data from the source specified in its verification info.
 
-IMPORTANT: This module uses the same client classes as _creation.py
-to ensure consistent data fetching between factory creation and
-verification. This avoids duplicate code and ensures both operations
-use identical API calls.
+IMPLEMENTATION STATUS:
+- GitHub API: Fully implemented (commits, issues, PRs, files, branches, tags, releases)
+- Wayback Machine: Implemented (CDX query verification)
+- Security Vendor: Implemented (URL and IOC value verification)
+- GH Archive: Partial - requires BigQuery credentials (gracefully skips if unavailable)
+- Local Git: Not implemented - requires local repository path
+
+IMPORTANT: This module uses the client classes from _clients.py
+to ensure consistent data fetching between factory creation and verification.
 """
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import TYPE_CHECKING, Any, Sequence
+from typing import TYPE_CHECKING, Sequence
 
 if TYPE_CHECKING:
     from ._schema import (
         AnyEvidence,
         Event,
         Observation,
-        CommitObservation,
-        IssueObservation,
-        PushEvent,
         VerificationResult,
     )
 
 from ._schema import EvidenceSource
 
-# Import shared client classes from _creation.py
-# This ensures verification uses the SAME fetch logic as factory creation
-from ._creation import GitHubClient, WaybackClient
+# Import client classes from dedicated module
+from ._clients import GitHubClient, GHArchiveClient
 
 
 def verify_event(event: "Event") -> "VerificationResult":
@@ -350,32 +350,88 @@ def _verify_fork_observation(observation: "Observation", client: GitHubClient, e
 # GH ARCHIVE VERIFICATION
 # =============================================================================
 
+# Shared GH Archive client (lazy-initialized)
+_gharchive_client: GHArchiveClient | None = None
+
+
+def _get_gharchive_client() -> GHArchiveClient | None:
+    """Get or create shared GH Archive client. Returns None if credentials unavailable."""
+    global _gharchive_client
+    if _gharchive_client is None:
+        try:
+            _gharchive_client = GHArchiveClient()
+            # Test if we can create a client (will fail if no credentials)
+            _gharchive_client._get_client()
+        except Exception:
+            # No credentials available - return None
+            return None
+    return _gharchive_client
+
 
 def _verify_gharchive_event(event: "Event") -> "VerificationResult":
-    """Verify event against GH Archive BigQuery."""
+    """Verify event against GH Archive BigQuery.
+
+    Requires BigQuery credentials via GOOGLE_APPLICATION_CREDENTIALS.
+    If credentials are not available, returns success with a note.
+    """
     errors: list[str] = []
 
-    # GH Archive verification requires BigQuery access
-    # For now, check that we have the required verification info
     if not event.verification.bigquery_table:
         errors.append("No BigQuery table specified for GH Archive verification")
         return False, errors
 
-    # TODO: Implement actual BigQuery verification
-    # This would require GCP credentials and is optional
-    return True, ["GH Archive verification not yet implemented - assuming valid"]
+    client = _get_gharchive_client()
+    if client is None:
+        # No credentials - can't verify but don't fail
+        return True, ["GH Archive verification skipped - no BigQuery credentials"]
+
+    # Extract timestamp from event.when
+    timestamp = event.when.strftime("%Y%m%d%H%M")
+    repo = event.repository.full_name if event.repository else None
+
+    try:
+        # Query GH Archive for matching events
+        rows = client.query_events(
+            repo=repo,
+            actor=event.who.login if event.who else None,
+            from_date=timestamp,
+        )
+
+        if not rows:
+            errors.append(f"No matching event found in GH Archive for timestamp {timestamp}")
+            return False, errors
+
+        # Found matching event(s)
+        return True, []
+
+    except Exception as e:
+        errors.append(f"GH Archive verification error: {e}")
+        return False, errors
 
 
 def _verify_gharchive_observation(observation: "Observation") -> "VerificationResult":
-    """Verify observation against GH Archive BigQuery."""
+    """Verify observation against GH Archive BigQuery.
+
+    Requires BigQuery credentials via GOOGLE_APPLICATION_CREDENTIALS.
+    If credentials are not available, returns success with a note.
+    """
     errors: list[str] = []
 
     if not observation.verification.bigquery_table:
         errors.append("No BigQuery table specified for GH Archive verification")
         return False, errors
 
-    # TODO: Implement actual BigQuery verification
-    return True, ["GH Archive verification not yet implemented - assuming valid"]
+    client = _get_gharchive_client()
+    if client is None:
+        return True, ["GH Archive verification skipped - no BigQuery credentials"]
+
+    # For observations, check using the verification query if provided
+    query = observation.verification.query
+    if query:
+        # TODO: Execute custom query when needed
+        return True, ["GH Archive observation verification not fully implemented"]
+
+    return True, []
 
 
 # =============================================================================
@@ -445,15 +501,32 @@ def _verify_security_vendor_observation(observation: "Observation") -> "Verifica
 
 # =============================================================================
 # GIT LOCAL VERIFICATION
+#
+# Note: Local git verification is NOT implemented because:
+# 1. It requires knowing the local repository path
+# 2. Evidence objects don't store the local path (they store GitHub URLs)
+# 3. The use case (verifying evidence from a clone) is rare
+#
+# If needed, users can manually verify by running git commands.
 # =============================================================================
 
 
 def _verify_git_event(event: "Event") -> "VerificationResult":
-    """Verify event against local git repository."""
-    # Git events are verified locally - would need repo path
-    return True, ["Local git verification requires repository path"]
+    """Verify event against local git repository.
+
+    Not implemented - local git verification requires a repository path
+    which isn't part of the evidence schema. Evidence is created from
+    public sources (GitHub API, GH Archive) not local clones.
+
+    Returns:
+        Always returns (True, [note]) to not block verification.
+    """
+    return True, ["Local git verification not supported - use GitHub API source instead"]
 
 
 def _verify_git_observation(observation: "Observation") -> "VerificationResult":
-    """Verify observation against local git repository."""
-    return True, ["Local git verification requires repository path"]
+    """Verify observation against local git repository.
+
+    Not implemented - see _verify_git_event for rationale.
+    """
+    return True, ["Local git verification not supported - use GitHub API source instead"]
