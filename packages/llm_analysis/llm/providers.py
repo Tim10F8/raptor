@@ -348,7 +348,12 @@ Respond with ONLY the JSON object, no markdown, no other text."""
                 # Extract content after </think> tag
                 # Remove everything between <think> and </think> (case insensitive)
                 content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL | re.IGNORECASE)
-                content = content.strip()
+
+            # Remove comments from JSON (Ollama code models add them)
+            content = re.sub(r'//.*?$', '', content, flags=re.MULTILINE)  # JavaScript //
+            content = re.sub(r'#.*?$', '', content, flags=re.MULTILINE)   # Python #
+            content = re.sub(r'/\*.*?\*/', '', content, flags=re.DOTALL)  # C /* */
+            content = content.strip()
 
             # Remove markdown code blocks if present
             if "```json" in content:

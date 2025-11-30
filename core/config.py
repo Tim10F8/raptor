@@ -69,7 +69,7 @@ class RaptorConfig:
     # Mapping of policy groups to their corresponding semgrep registry packs
     # Format: {local_dir_name: (pack_name, pack_identifier)}
     POLICY_GROUP_TO_SEMGREP_PACK: Dict[str, Tuple[str, str]] = {
-        "crypto": ("semgrep_crypto", "p/crypto"),
+        "crypto": ("semgrep_crypto", "category/crypto"),  # p/crypto deprecated, use category/crypto
         "secrets": ("semgrep_secrets", "p/secrets"),  # Already in baseline but include for completeness
         "injection": ("semgrep_injection", "p/command-injection"),
         "auth": ("semgrep_auth", "p/jwt"),
