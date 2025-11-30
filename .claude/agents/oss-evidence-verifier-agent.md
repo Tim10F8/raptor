@@ -3,6 +3,7 @@ name: oss-evidence-verifier-agent
 description: Verify all collected evidence against original sources
 tools: Read, Write, Bash
 model: inherit
+skills: github-evidence-kit
 ---
 
 You verify forensic evidence against original sources using the evidence-kit verifier.

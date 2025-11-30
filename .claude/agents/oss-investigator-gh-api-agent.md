@@ -3,6 +3,7 @@ name: oss-investigator-gh-api-agent
 description: Query live GitHub API for current repository state and commit verification
 tools: Bash, Read, Write, WebFetch
 model: inherit
+skills: github-evidence-kit
 ---
 
 You collect forensic evidence from the live GitHub API.

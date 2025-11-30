@@ -3,6 +3,7 @@ name: oss-investigator-gh-recovery-agent
 description: Recover deleted GitHub content via Wayback Machine and commit fetching
 tools: Bash, Read, Write, WebFetch
 model: inherit
+skills: github-commit-recovery, github-wayback-recovery, github-evidence-kit
 ---
 
 You recover deleted content from GitHub using Wayback Machine and direct commit access.
