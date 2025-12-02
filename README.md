@@ -71,7 +71,7 @@ without asking, check dependencies.txt first.
 ## What's unique about RAPTOR?
 
 Beyond RAPTOR's potential for autonomous security research and community collaboration, it
-demonstrates how Claude Code can be adapted for any purpose**, with RAPTOR packages.
+demonstrates how Claude Code can be adapted for **any purpose**, with RAPTOR packages.
 
 ---
 
@@ -89,7 +89,7 @@ git clone https://github.com/gadievron/raptor.git
 cd raptor
 claude
 
-# 3. Let Claude install dependencies
+# 3. Let Claude install dependencies, and check licenses for the various tools
 "Install dependencies from requirements.txt"
 "Install semgrep"
 "Set my ANTHROPIC_API_KEY to [your-key]"
@@ -292,6 +292,8 @@ https://join.slack.com/t/promptgtfo/shared_invite/zt-3alf92eqe-BpVLxPbWTI50Tbl11
 MIT License - Copyright (c) 2025 Gadi Evron, Daniel Cuthbert, Thomas Dullien (Halvar Flake), and Michael Bargury
 
 See LICENSE file for full text.
+
+Make sure and review the licenses for the various tools. For example, CodeQL does not allow commercial use.
 
 ---
 
