@@ -319,17 +319,19 @@ python3 raptor.py fuzz --binary /path/to/binary --duration 3600
 
 ## Documentation
 
+### User Guides
 - **CLAUDE_CODE_USAGE.md** - Complete Claude Code usage guide
 - **PYTHON_CLI.md** - Python command-line reference
-- **ARCHITECTURE.md** - Technical architecture details
-- **EXTENDING_LAUNCHER.md** - How to add new capabilities
 - **FUZZING_QUICKSTART.md** - Binary fuzzing guide
 - **.claude/commands/oss-forensics.md** - OSS forensics investigation guide
-- **DEPENDENCIES.md** - External tools and licenses
-- **tiers/personas/README.md** - All 9 expert personas
 - **TESTING.md** - Test suite documentation and user stories
 
----
+### Architecture & Development
+- **ARCHITECTURE.md** - Technical architecture details
+- **EXTENDING_LAUNCHER.md** - How to add new capabilities
+- **DEPENDENCIES.md** - External tools and licenses
+- **tiers/personas/README.md** - All 9 expert personas
+
 
 ## Contribute
 

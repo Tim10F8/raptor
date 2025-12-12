@@ -22,7 +22,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from core.logging import get_logger
-from packages.llm_analysis.llm.client import LLMClient
+from packages.llm_analysis.llm.providers import LLMProvider
 from packages.web.client import WebClient
 
 logger = get_logger()
@@ -31,7 +31,7 @@ logger = get_logger()
 class WebFuzzer:
     """LLM-powered intelligent fuzzer - no static payloads."""
 
-    def __init__(self, client: WebClient, llm: LLMClient):
+    def __init__(self, client: WebClient, llm: LLMProvider):
         self.client = client
         self.llm = llm
 
@@ -102,14 +102,13 @@ Generate {count} intelligent, context-aware payloads to test for {vuln_type} vul
 Respond with a JSON array of payload strings."""
 
         schema = {
-            "payloads": ["list of payload strings"]
+            "payloads": "array - list of payload strings"
         }
 
         try:
-            result = self.llm.generate_structured(
+            result, _ = self.llm.generate_structured(
                 prompt=prompt,
                 schema=schema,
-                task_type="exploit_generation",
             )
 
             payloads = result.get('payloads', [])
